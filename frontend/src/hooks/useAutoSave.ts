@@ -16,6 +16,7 @@ export function useAutoSave(
   edges: Edge[],
   options: SerializeOptions,
   onStatusChange: (status: SaveStatus) => void,
+  onSaved?: (workflowId: string) => void,
 ): { saveNow: () => Promise<void> } {
   const debounceTimer = useRef<number | null>(null);
   const savedTimer = useRef<number | null>(null);
@@ -37,6 +38,7 @@ export function useAutoSave(
     onStatusChange('saving');
     try {
       await updateWorkflow(workflowId, payload);
+      onSaved?.(workflowId);
       onStatusChange('saved');
       savedTimer.current = window.setTimeout(() => {
         onStatusChange('idle');
@@ -46,7 +48,7 @@ export function useAutoSave(
       console.error('Auto-save failed', err);
       onStatusChange('idle');
     }
-  }, [workflowId, nodes, edges, options, onStatusChange]);
+  }, [workflowId, nodes, edges, options, onStatusChange, onSaved]);
 
   useEffect(() => {
     if (!workflowId) {

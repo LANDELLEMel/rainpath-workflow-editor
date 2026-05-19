@@ -39,28 +39,63 @@ export class WorkflowsService {
     return workflow;
   }
 
-  /** Crée un nouveau workflow avec un nœud Start pré-placé. */
+  /** Crée un nouveau workflow avec Start, End et l'edge qui les relie. */
   async create(dto: CreateWorkflowDto) {
-    return this.prisma.workflow.create({
-      data: {
-        name: dto.name,
-        examTypes: JSON.stringify(dto.examTypes),
-        nodes: {
-          create: {
-            type: 'start',
-            label: 'Examen effectué',
-            positionX: 0,
-            positionY: 0,
-            gridCol: 0,
-            gridRow: 0,
-            config: '{}',
-          },
+    const NODE_WIDTH = 200;
+    const HORIZONTAL_GAP = 120;
+    const COL_STRIDE = NODE_WIDTH + HORIZONTAL_GAP; // 320
+
+    return this.prisma.$transaction(async (tx) => {
+      const workflow = await tx.workflow.create({
+        data: {
+          name: dto.name,
+          examTypes: JSON.stringify(dto.examTypes),
         },
-      },
-      include: {
-        nodes: true,
-        edges: true,
-      },
+      });
+
+      const startNode = await tx.node.create({
+        data: {
+          workflowId: workflow.id,
+          type: 'start',
+          label: 'Examen effectué',
+          positionX: 0,
+          positionY: 0,
+          gridCol: 0,
+          gridRow: 0,
+          config: '{}',
+        },
+      });
+
+      const endNode = await tx.node.create({
+        data: {
+          workflowId: workflow.id,
+          type: 'end',
+          label: 'Résultat retiré',
+          positionX: COL_STRIDE,
+          positionY: 0,
+          gridCol: 1,
+          gridRow: 0,
+          config: '{}',
+        },
+      });
+
+      await tx.edge.create({
+        data: {
+          workflowId: workflow.id,
+          sourceId: startNode.id,
+          targetId: endNode.id,
+          type: 'escalation',
+          delayDays: null,
+        },
+      });
+
+      return tx.workflow.findUnique({
+        where: { id: workflow.id },
+        include: {
+          nodes: { orderBy: [{ gridCol: 'asc' }, { gridRow: 'asc' }] },
+          edges: true,
+        },
+      });
     });
   }
 

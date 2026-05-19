@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyEdgeChanges,
   applyNodeChanges,
@@ -20,6 +20,7 @@ import {
   type ToastType,
 } from './components/Toast';
 import { useAutoSave } from './hooks/useAutoSave';
+import { useHistory } from './hooks/useHistory';
 import { useOnboarding } from './hooks/useOnboarding';
 import {
   createWorkflow,
@@ -205,6 +206,13 @@ export default function App() {
   );
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const nodesRef = useRef<Node[]>(nodes);
+  const edgesRef = useRef<Edge[]>(edges);
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+
+  const { pushState, undo: historyUndo, canUndo, reset: resetHistory } = useHistory();
+
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -235,6 +243,7 @@ export default function App() {
 
   const handleChangeDelay = useCallback(
     (edgeId: string, days: number) => {
+      pushState(nodesRef.current, edgesRef.current);
       setEdges((eds) =>
         eds.map((e) =>
           e.id === edgeId
@@ -246,7 +255,7 @@ export default function App() {
         ),
       );
     },
-    [],
+    [pushState],
   );
 
   const loadWorkflow = useCallback(
@@ -260,8 +269,9 @@ export default function App() {
       setNodes(fn);
       setEdges(fe);
       setSelectedNodeId(null);
+      resetHistory();
     },
-    [handleChangeDelay],
+    [handleChangeDelay, resetHistory],
   );
 
   useEffect(() => {
@@ -307,59 +317,40 @@ export default function App() {
   const handleAddChannelNode = useCallback(
     (channelType: ChannelType, _dropPosition: { x: number; y: number }) => {
       void _dropPosition;
-      setNodes((currentNodes) => {
-        const sameChannelNodes = currentNodes.filter((n) => {
-          if (n.type !== 'channel') return false;
-          const ct = (n.data as { channelType?: string }).channelType;
-          return ct === channelType;
+      pushState(nodesRef.current, edgesRef.current);
+
+      const currentNodes = nodesRef.current;
+      const currentEdges = edgesRef.current;
+
+      const sameChannelNodes = currentNodes.filter((n) => {
+        if (n.type !== 'channel') return false;
+        const ct = (n.data as { channelType?: string }).channelType;
+        return ct === channelType;
+      });
+
+      const newId = crypto.randomUUID();
+      const cfg = CHANNEL_CONFIG[channelType];
+
+      if (sameChannelNodes.length > 0) {
+        // === RELANCE (verticale) — pas d'impact sur End ===
+        const last = sameChannelNodes.reduce((acc, n) => {
+          const r = (n.data as { gridRow: number }).gridRow;
+          const ar = (acc.data as { gridRow: number }).gridRow;
+          return r > ar ? n : acc;
         });
-
-        let gridCol: number;
-        let gridRow: number;
-        let sourceNodeId: string | null = null;
-        let edgeType: 'escalation' | 'reminder' = 'escalation';
-
-        if (sameChannelNodes.length > 0) {
-          const last = sameChannelNodes.reduce((acc, n) => {
-            const r = (n.data as { gridRow: number }).gridRow;
-            const ar = (acc.data as { gridRow: number }).gridRow;
-            return r > ar ? n : acc;
-          });
-          const lastGrid = getGridFromNode(last);
-          gridCol = lastGrid.gridCol;
-          gridRow = lastGrid.gridRow + 1;
-          sourceNodeId = last.id;
-          edgeType = 'reminder';
-        } else {
-          const colsInUse = currentNodes
-            .filter(
-              (n) => n.type === 'channel' || n.type === 'start',
-            )
-            .map((n) => getGridFromNode(n).gridCol);
-          const maxCol =
-            colsInUse.length > 0 ? Math.max(...colsInUse) : 0;
-          gridCol = maxCol + 1;
-          gridRow = 0;
-
-          const candidates = currentNodes.filter((n) => {
-            const g = getGridFromNode(n);
-            return g.gridCol === maxCol && g.gridRow === 0;
-          });
-          if (candidates.length > 0) sourceNodeId = candidates[0].id;
-          edgeType = 'escalation';
-        }
-
+        const lastGrid = getGridFromNode(last);
+        const gridCol = lastGrid.gridCol;
+        const gridRow = lastGrid.gridRow + 1;
         const pos = calculateNodePosition(gridCol, gridRow);
-        const id = crypto.randomUUID();
-        const cfg = CHANNEL_CONFIG[channelType];
+
         const newNode: Node = {
-          id,
+          id: newId,
           type: 'channel',
           position: { x: pos.positionX, y: pos.positionY },
           data: {
             channelType,
             label: cfg.label,
-            sublabel: gridRow === 0 ? 'Première communication' : 'Relance',
+            sublabel: 'Relance',
             isConfigured: false,
             config: {},
             gridCol,
@@ -367,35 +358,134 @@ export default function App() {
           } satisfies ChannelNodeData,
         };
 
-        if (sourceNodeId) {
-          setEdges((currentEdges) => [
-            ...currentEdges,
-            {
-              id: crypto.randomUUID(),
-              source: sourceNodeId,
-              target: id,
-              type: edgeType,
-              sourceHandle: edgeType === 'reminder' ? 'bottom' : undefined,
-              targetHandle: edgeType === 'reminder' ? 'top' : undefined,
-              data: {
-                delayDays: edgeType === 'reminder' ? 7 : undefined,
-                channelType,
-                onChangeDelay: handleChangeDelay,
-              },
-              markerEnd: { type: 'arrowclosed', width: 12, height: 12 },
-            } as Edge,
-          ]);
-        }
+        setNodes([...currentNodes, newNode]);
+        setEdges([
+          ...currentEdges,
+          {
+            id: crypto.randomUUID(),
+            source: last.id,
+            target: newId,
+            type: 'reminder',
+            sourceHandle: 'bottom',
+            targetHandle: 'top',
+            data: {
+              delayDays: 7,
+              channelType,
+              onChangeDelay: handleChangeDelay,
+            },
+            markerEnd: { type: 'arrowclosed', width: 12, height: 12 },
+          } as Edge,
+        ]);
+        setSelectedNodeId(null);
+        return;
+      }
 
-        return [...currentNodes, newNode];
+      // === ESCALADE (horizontale) — insertion avant End si présent ===
+      const endNode = currentNodes.find((n) => n.type === 'end');
+      const channelOrStartCols = currentNodes
+        .filter((n) => n.type === 'channel' || n.type === 'start')
+        .map((n) => getGridFromNode(n).gridCol);
+      const maxCol =
+        channelOrStartCols.length > 0
+          ? Math.max(...channelOrStartCols)
+          : 0;
+
+      const sourceNode = currentNodes.find((n) => {
+        const g = getGridFromNode(n);
+        return (
+          (n.type === 'channel' || n.type === 'start') &&
+          g.gridCol === maxCol &&
+          g.gridRow === 0
+        );
       });
+      const sourceNodeId = sourceNode?.id ?? null;
+
+      let newCol: number;
+      let nextNodes = currentNodes;
+      let nextEdges = currentEdges;
+
+      if (endNode) {
+        const endCol = getGridFromNode(endNode).gridCol;
+        newCol = endCol;
+        // Pousser End d'une colonne vers la droite.
+        nextNodes = currentNodes.map((n) =>
+          n.id === endNode.id
+            ? {
+                ...n,
+                position: {
+                  x: (endCol + 1) * COLUMN_STRIDE,
+                  y: n.position.y,
+                },
+                data: { ...n.data, gridCol: endCol + 1 },
+              }
+            : n,
+        );
+        // Supprimer toute edge qui pointait sur End depuis le futur source —
+        // elle est remplacée par source → newChannel → End.
+        nextEdges = currentEdges.filter(
+          (e) =>
+            !(e.target === endNode.id && e.source === sourceNodeId),
+        );
+      } else {
+        newCol = maxCol + 1;
+      }
+
+      const pos = calculateNodePosition(newCol, 0);
+      const newNode: Node = {
+        id: newId,
+        type: 'channel',
+        position: { x: pos.positionX, y: pos.positionY },
+        data: {
+          channelType,
+          label: cfg.label,
+          sublabel: 'Première communication',
+          isConfigured: false,
+          config: {},
+          gridCol: newCol,
+          gridRow: 0,
+        } satisfies ChannelNodeData,
+      };
+
+      const addedEdges: Edge[] = [];
+      if (sourceNodeId) {
+        addedEdges.push({
+          id: crypto.randomUUID(),
+          source: sourceNodeId,
+          target: newId,
+          type: 'escalation',
+          data: {
+            delayDays: undefined,
+            channelType,
+            onChangeDelay: handleChangeDelay,
+          },
+          markerEnd: { type: 'arrowclosed', width: 12, height: 12 },
+        } as Edge);
+      }
+      if (endNode) {
+        addedEdges.push({
+          id: crypto.randomUUID(),
+          source: newId,
+          target: endNode.id,
+          type: 'escalation',
+          data: {
+            delayDays: undefined,
+            channelType,
+            onChangeDelay: handleChangeDelay,
+          },
+          markerEnd: { type: 'arrowclosed', width: 12, height: 12 },
+        } as Edge);
+      }
+
+      setNodes([...nextNodes, newNode]);
+      setEdges([...nextEdges, ...addedEdges]);
       setSelectedNodeId(null);
     },
-    [handleChangeDelay],
+    [handleChangeDelay, pushState],
   );
 
   const handleAddReminder = useCallback(
     (nodeId: string) => {
+      pushState(nodesRef.current, edgesRef.current);
       setNodes((currentNodes) => {
         const source = currentNodes.find((n) => n.id === nodeId);
         if (!source) return currentNodes;
@@ -468,7 +558,7 @@ export default function App() {
         return [...currentNodes, newNode];
       });
     },
-    [handleChangeDelay],
+    [handleChangeDelay, pushState],
   );
 
   const handleChangeNodeLabel = useCallback(
@@ -485,6 +575,11 @@ export default function App() {
   );
 
   const handleDeleteNode = useCallback((nodeId: string) => {
+    const target = nodesRef.current.find((n) => n.id === nodeId);
+    if (!target || target.type === 'start' || target.type === 'end') {
+      return;
+    }
+    pushState(nodesRef.current, edgesRef.current);
     setEdges((eds) => {
       const incoming = eds.filter((e) => e.target === nodeId);
       const outgoing = eds.filter((e) => e.source === nodeId);
@@ -512,10 +607,11 @@ export default function App() {
     });
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     setSelectedNodeId((curr) => (curr === nodeId ? null : curr));
-  }, []);
+  }, [pushState]);
 
   const handleSaveMessageConfig = useCallback(
     (nodeId: string, config: NodeConfig) => {
+      pushState(nodesRef.current, edgesRef.current);
       setNodes((nds) =>
         nds.map((n) =>
           n.id === nodeId
@@ -532,17 +628,41 @@ export default function App() {
       );
       setMessageModalNodeId(null);
     },
-    [],
+    [pushState],
   );
 
   const handleWorkflowNameChange = useCallback((next: string) => {
-    setActiveWorkflow((w) => (w ? { ...w, name: next } : w));
+    setActiveWorkflow((w) => {
+      if (!w) return w;
+      setWorkflows((list) =>
+        list.map((s) =>
+          s.id === w.id ? { ...s, name: next, updatedAt: new Date().toISOString() } : s,
+        ),
+      );
+      return { ...w, name: next };
+    });
   }, []);
   const handleExamTypesChange = useCallback((next: string[]) => {
-    setActiveWorkflow((w) => (w ? { ...w, examTypes: next } : w));
+    setActiveWorkflow((w) => {
+      if (!w) return w;
+      setWorkflows((list) =>
+        list.map((s) =>
+          s.id === w.id ? { ...s, examTypes: next, updatedAt: new Date().toISOString() } : s,
+        ),
+      );
+      return { ...w, examTypes: next };
+    });
   }, []);
   const handleGlobalTimeoutChange = useCallback((days: number) => {
-    setActiveWorkflow((w) => (w ? { ...w, globalTimeout: days } : w));
+    setActiveWorkflow((w) => {
+      if (!w) return w;
+      setWorkflows((list) =>
+        list.map((s) =>
+          s.id === w.id ? { ...s, globalTimeout: days, updatedAt: new Date().toISOString() } : s,
+        ),
+      );
+      return { ...w, globalTimeout: days };
+    });
   }, []);
 
   const handleCreateWorkflow = useCallback(
@@ -611,13 +731,41 @@ export default function App() {
     ],
   );
 
+  const handleSaved = useCallback(
+    (wfId: string) => {
+      setWorkflows((list) =>
+        list.map((s) =>
+          s.id === wfId
+            ? { ...s, updatedAt: new Date().toISOString() }
+            : s,
+        ),
+      );
+    },
+    [],
+  );
+
   const { saveNow } = useAutoSave(
     activeWorkflow?.id ?? null,
     nodes,
     edges,
     autoSaveOptions,
     setSaveStatus,
+    handleSaved,
   );
+
+  const handleUndo = useCallback(() => {
+    const entry = historyUndo();
+    if (!entry) return;
+    setNodes(entry.nodes);
+    // Re-inject onChangeDelay callback stripped by JSON serialization in useHistory
+    setEdges(
+      entry.edges.map((e) =>
+        e.data
+          ? { ...e, data: { ...e.data, onChangeDelay: handleChangeDelay } }
+          : e,
+      ),
+    );
+  }, [historyUndo, handleChangeDelay]);
 
   useEffect(() => {
     function isEditableTarget(target: EventTarget | null): boolean {
@@ -635,6 +783,13 @@ export default function App() {
       if (cmd && e.key === 's') {
         e.preventDefault();
         void saveNow();
+        return;
+      }
+
+      if (cmd && e.key === 'z' && !e.shiftKey) {
+        if (isEditableTarget(e.target)) return;
+        e.preventDefault();
+        handleUndo();
         return;
       }
 
@@ -665,6 +820,7 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [
     saveNow,
+    handleUndo,
     selectedNodeId,
     handleDeleteNode,
     messageModalNodeId,
@@ -747,6 +903,8 @@ export default function App() {
             onNodeClick={handleNodeClick}
             onPaneClick={handlePaneClick}
             onAddChannelNode={handleAddChannelNode}
+            onUndo={handleUndo}
+            canUndo={canUndo}
           />
         </main>
 

@@ -40,7 +40,7 @@ const CANVAS_CONFIG = {
 
 const CHANNEL_DRAG_MIME = 'application/x-rainpath-channel';
 
-function ZoomControls({ onUndo }: { onUndo?: () => void }) {
+function ZoomControls({ onUndo, canUndo }: { onUndo?: () => void; canUndo?: boolean }) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const buttonClass =
     'w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300 active:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E85D4A]/20 focus-visible:ring-offset-1 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed';
@@ -75,7 +75,7 @@ function ZoomControls({ onUndo }: { onUndo?: () => void }) {
         aria-label="Annuler"
         onClick={onUndo}
         className={buttonClass}
-        disabled={!onUndo}
+        disabled={!canUndo}
       >
         <RotateCcw size={16} />
       </button>
@@ -92,6 +92,7 @@ export interface CanvasProps {
   onNodeClick?: Parameters<typeof ReactFlow>[0]['onNodeClick'];
   onPaneClick?: Parameters<typeof ReactFlow>[0]['onPaneClick'];
   onUndo?: () => void;
+  canUndo?: boolean;
   onAddChannelNode?: (
     channelType: ChannelType,
     position: { x: number; y: number },
@@ -107,6 +108,7 @@ function CanvasInner({
   onNodeClick,
   onPaneClick,
   onUndo,
+  canUndo,
   onAddChannelNode,
 }: CanvasProps) {
   const { screenToFlowPosition } = useReactFlow();
@@ -215,7 +217,7 @@ function CanvasInner({
           }}
         />
       </ReactFlow>
-      <ZoomControls onUndo={onUndo} />
+      <ZoomControls onUndo={onUndo} canUndo={canUndo} />
 
       {channelNodeCount === 0 && !isDropOver && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1]">
