@@ -1,13 +1,64 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// RainPath Workflow Editor — Prisma Schema
+// Base SQLite pour le mini-projet
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
+}
+
+/// Un workflow de relance patient, créé par un chef de labo.
+model Workflow {
+  id            String   @id @default(uuid())
+  name          String
+  examTypes     String   @default("[]") // JSON array des types d'examen
+  globalTimeout Int      @default(7)    // jours avant passage au canal suivant si non ouvert
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  nodes Node[]
+  edges Edge[]
+}
+
+/// Un nœud dans le workflow : start, canal d'envoi, ou fin.
+model Node {
+  id         String @id @default(uuid())
+  workflowId String
+  type       String // "start" | "email" | "sms" | "whatsapp" | "courrier" | "appel" | "end"
+  label      String
+  positionX  Float  @default(0)
+  positionY  Float  @default(0)
+  gridCol    Int    @default(0)
+  gridRow    Int    @default(0)
+  config     String @default("{}") // JSON : sujet, corps message, variables, etc.
+
+  createdAt DateTime @default(now())
+
+  workflow  Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  edgesFrom Edge[]   @relation("EdgeSource")
+  edgesTo   Edge[]   @relation("EdgeTarget")
+
+  @@index([workflowId])
+}
+
+/// Une connexion entre deux nœuds : escalade horizontale ou relance verticale.
+model Edge {
+  id         String @id @default(uuid())
+  workflowId String
+  sourceId   String
+  targetId   String
+  type       String // "escalation" (horizontal) | "reminder" (vertical)
+  delayDays  Int?   // délai en jours pour les relances verticales
+
+  createdAt DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  source   Node     @relation("EdgeSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target   Node     @relation("EdgeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([sourceId])
+  @@index([targetId])
 }
