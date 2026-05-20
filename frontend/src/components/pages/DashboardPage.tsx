@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   closestCorners,
   DndContext,
@@ -40,6 +40,7 @@ function PatientCard({
   patient: Patient;
   onClick: () => void;
 }) {
+  const wasDraggingRef = useRef(false);
   const {
     attributes,
     listeners,
@@ -48,6 +49,10 @@ function PatientCard({
     transition,
     isDragging,
   } = useSortable({ id: patient.id });
+
+  // Mémorise qu'un drag a eu lieu, même si isDragging repasse à false
+  // avant que le click ne soit dispatché.
+  if (isDragging) wasDraggingRef.current = true;
 
   const channelCfg = CHANNEL_CONFIG[patient.canal];
   const ChannelIcon = channelCfg.icon;
@@ -59,13 +64,21 @@ function PatientCard({
     opacity: isDragging ? 0.4 : 1,
   };
 
+  const handleClick = () => {
+    if (wasDraggingRef.current) {
+      wasDraggingRef.current = false;
+      return;
+    }
+    onClick();
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      onClick={onClick}
+      onClick={handleClick}
       className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 cursor-grab active:cursor-grabbing hover:border-gray-300 hover:shadow transition-all duration-150"
     >
       <PatientCardContent patient={patient}>
