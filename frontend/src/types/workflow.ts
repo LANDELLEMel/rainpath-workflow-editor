@@ -1,3 +1,5 @@
+export type AppTab = 'editor' | 'stats' | 'dashboard' | 'config';
+
 export type ChannelType = 'email' | 'whatsapp' | 'sms' | 'courrier' | 'appel';
 
 export type NodeType = ChannelType | 'start' | 'end';

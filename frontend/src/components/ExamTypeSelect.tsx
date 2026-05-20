@@ -5,9 +5,14 @@ import { EXAM_TYPES } from '../config/examTypes';
 export interface ExamTypeSelectProps {
   value: string[];
   onChange: (next: string[]) => void;
+  readOnly?: boolean;
 }
 
-export function ExamTypeSelect({ value, onChange }: ExamTypeSelectProps) {
+export function ExamTypeSelect({
+  value,
+  onChange,
+  readOnly = false,
+}: ExamTypeSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -21,6 +26,10 @@ export function ExamTypeSelect({ value, onChange }: ExamTypeSelectProps) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  useEffect(() => {
+    if (readOnly && open) setOpen(false);
+  }, [readOnly, open]);
+
   function toggle(type: string) {
     if (value.includes(type)) {
       onChange(value.filter((t) => t !== type));
@@ -31,6 +40,28 @@ export function ExamTypeSelect({ value, onChange }: ExamTypeSelectProps) {
 
   function remove(type: string) {
     onChange(value.filter((t) => t !== type));
+  }
+
+  if (readOnly) {
+    if (value.length === 0) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-400 opacity-80">
+          Aucun type
+        </span>
+      );
+    }
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap opacity-80">
+        {value.map((t) => (
+          <span
+            key={t}
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+          >
+            {t}
+          </span>
+        ))}
+      </div>
+    );
   }
 
   return (

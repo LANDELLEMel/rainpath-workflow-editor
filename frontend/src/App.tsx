@@ -14,6 +14,9 @@ import { Canvas } from './components/Canvas';
 import { CreateWorkflowModal } from './components/CreateWorkflowModal';
 import { MessageModal } from './components/MessageModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { ConfigPage } from './components/pages/ConfigPage';
+import { DashboardPage } from './components/pages/DashboardPage';
+import { StatsPage } from './components/pages/StatsPage';
 import {
   ToastContainer,
   type ToastData,
@@ -29,6 +32,7 @@ import {
   fetchWorkflows,
 } from './api/workflows';
 import type {
+  AppTab,
   ChannelType,
   NodeConfig,
   Workflow,
@@ -224,6 +228,7 @@ export default function App() {
     string | null
   >(null);
   const [toasts, setToasts] = useState<ToastData[]>([]);
+  const [activeTab, setActiveTab] = useState<AppTab>('editor');
 
   const { showOnboarding, dismissOnboarding } = useOnboarding();
 
@@ -876,56 +881,89 @@ export default function App() {
         onToggleLeftDrawer={() => setLeftDrawerOpen((o) => !o)}
         rightPanelOpen={rightPanelOpen}
         onToggleRightPanel={() => setRightPanelOpen((o) => !o)}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
       <div className="flex-1 flex min-h-0">
-        <div
-          className="shrink-0 overflow-hidden transition-[width] duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-          style={{ width: leftDrawerOpen ? LEFT_DRAWER_WIDTH : 0 }}
-        >
-          <div style={{ width: LEFT_DRAWER_WIDTH, height: '100%' }}>
-            <LeftDrawer
-              workflows={workflows}
-              activeWorkflowId={activeWorkflow?.id ?? null}
-              onSelect={(id) => void loadWorkflow(id)}
-              onCreate={() => setShowCreateModal(true)}
-              onDelete={handleDeleteWorkflow}
-              loading={workflowsLoading}
-            />
+        {activeTab === 'editor' && (
+          <div
+            className="shrink-0 overflow-hidden transition-[width] duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+            style={{ width: leftDrawerOpen ? LEFT_DRAWER_WIDTH : 0 }}
+          >
+            <div style={{ width: LEFT_DRAWER_WIDTH, height: '100%' }}>
+              <LeftDrawer
+                workflows={workflows}
+                activeWorkflowId={activeWorkflow?.id ?? null}
+                onSelect={(id) => void loadWorkflow(id)}
+                onCreate={() => setShowCreateModal(true)}
+                onDelete={handleDeleteWorkflow}
+                loading={workflowsLoading}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <main className="flex-1 min-w-0 relative">
-          <Canvas
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onNodeClick={handleNodeClick}
-            onPaneClick={handlePaneClick}
-            onAddChannelNode={handleAddChannelNode}
-            onUndo={handleUndo}
-            canUndo={canUndo}
-          />
-        </main>
-
-        <div
-          className="shrink-0 overflow-hidden transition-[width] duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-          style={{ width: rightPanelOpen ? RIGHT_PANEL_WIDTH : 0 }}
-        >
-          <div style={{ width: RIGHT_PANEL_WIDTH, height: '100%' }}>
-            <RightPanel
-              globalTimeout={activeWorkflow?.globalTimeout ?? 7}
-              onChangeGlobalTimeout={handleGlobalTimeoutChange}
-              selectedNode={selectedNodeInfo}
-              onChangeNodeLabel={handleChangeNodeLabel}
-              onAddReminder={handleAddReminder}
-              onDeleteNode={handleDeleteNode}
-              onOpenMessageModal={(nodeId) =>
-                setMessageModalNodeId(nodeId)
-              }
+          {/* Editor — toujours monté pour préserver l'état ReactFlow (ARCHI-1) */}
+          <div
+            style={{ display: activeTab === 'editor' ? 'block' : 'none' }}
+            className="w-full h-full"
+          >
+            <Canvas
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onNodeClick={handleNodeClick}
+              onPaneClick={handlePaneClick}
+              onAddChannelNode={handleAddChannelNode}
+              onUndo={handleUndo}
+              canUndo={canUndo}
             />
           </div>
-        </div>
+
+          <div
+            style={{ display: activeTab === 'stats' ? 'block' : 'none' }}
+            className="w-full h-full overflow-auto"
+          >
+            <StatsPage />
+          </div>
+
+          <div
+            style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}
+            className="w-full h-full overflow-auto"
+          >
+            <DashboardPage />
+          </div>
+
+          <div
+            style={{ display: activeTab === 'config' ? 'block' : 'none' }}
+            className="w-full h-full overflow-auto"
+          >
+            <ConfigPage />
+          </div>
+        </main>
+
+        {activeTab === 'editor' && (
+          <div
+            className="shrink-0 overflow-hidden transition-[width] duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+            style={{ width: rightPanelOpen ? RIGHT_PANEL_WIDTH : 0 }}
+          >
+            <div style={{ width: RIGHT_PANEL_WIDTH, height: '100%' }}>
+              <RightPanel
+                globalTimeout={activeWorkflow?.globalTimeout ?? 7}
+                onChangeGlobalTimeout={handleGlobalTimeoutChange}
+                selectedNode={selectedNodeInfo}
+                onChangeNodeLabel={handleChangeNodeLabel}
+                onAddReminder={handleAddReminder}
+                onDeleteNode={handleDeleteNode}
+                onOpenMessageModal={(nodeId) =>
+                  setMessageModalNodeId(nodeId)
+                }
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <CreateWorkflowModal
