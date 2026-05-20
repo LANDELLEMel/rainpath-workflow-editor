@@ -1,11 +1,11 @@
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
   Legend,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -18,6 +18,7 @@ import {
   kpis,
   responseRateByChannel,
   resultStatusDistribution,
+  retrievalByExamType,
   weeklyReminderVolume,
 } from '../../data/mockStats';
 
@@ -61,9 +62,15 @@ interface ChartCardProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  height?: number;
 }
 
-function ChartCard({ title, subtitle, children }: ChartCardProps) {
+function ChartCard({
+  title,
+  subtitle,
+  children,
+  height = 250,
+}: ChartCardProps) {
   return (
     <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
       <header className="mb-3">
@@ -72,7 +79,7 @@ function ChartCard({ title, subtitle, children }: ChartCardProps) {
           <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
         )}
       </header>
-      <div className="h-[250px]">
+      <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           {children as React.ReactElement}
         </ResponsiveContainer>
@@ -186,10 +193,24 @@ export function StatsPage() {
           title="Délai moyen de récupération"
           subtitle="6 derniers mois — en jours"
         >
-          <LineChart
+          <AreaChart
             data={avgRetrievalDelayTrend}
             margin={{ top: 8, right: 16, left: -16, bottom: 8 }}
           >
+            <defs>
+              <linearGradient id="gradientCorail" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor={CORAIL}
+                  stopOpacity={0.15}
+                />
+                <stop
+                  offset="95%"
+                  stopColor={CORAIL}
+                  stopOpacity={0.02}
+                />
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
             <XAxis
               dataKey="month"
@@ -207,18 +228,17 @@ export function StatsPage() {
               contentStyle={tooltipStyle}
               formatter={(v) => [`${v} j`, 'Délai moyen']}
             />
-            <Line
+            <Area
               type="monotone"
               dataKey="days"
               stroke={CORAIL}
               strokeWidth={2.5}
+              fill="url(#gradientCorail)"
               dot={{ r: 4, fill: CORAIL, strokeWidth: 0 }}
               activeDot={{ r: 6 }}
-              fill={CORAIL}
-              fillOpacity={0.1}
               isAnimationActive={false}
             />
-          </LineChart>
+          </AreaChart>
         </ChartCard>
 
         <ChartCard
@@ -250,6 +270,26 @@ export function StatsPage() {
                 <Cell key={entry.status} fill={entry.color} />
               ))}
             </Pie>
+            <text
+              x="50%"
+              y="42%"
+              textAnchor="middle"
+              dominantBaseline="central"
+              className="fill-gray-900 font-bold"
+              style={{ fontSize: 22 }}
+            >
+              {frenchNumber(totalDossiers)}
+            </text>
+            <text
+              x="50%"
+              y="52%"
+              textAnchor="middle"
+              dominantBaseline="central"
+              className="fill-gray-400"
+              style={{ fontSize: 11 }}
+            >
+              dossiers
+            </text>
           </PieChart>
         </ChartCard>
 
@@ -314,6 +354,59 @@ export function StatsPage() {
               name="Courrier"
               radius={[6, 6, 0, 0]}
               isAnimationActive={false}
+            />
+          </BarChart>
+        </ChartCard>
+      </div>
+
+      <div className="mt-4">
+        <ChartCard
+          title="Taux de récupération par type d'examen"
+          subtitle="Pourcentage de résultats récupérés"
+          height={320}
+        >
+          <BarChart
+            data={retrievalByExamType}
+            layout="vertical"
+            margin={{ top: 8, right: 32, left: 8, bottom: 8 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#E5E7EB"
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              domain={[0, 100]}
+              tick={{ fontSize: 11, fill: '#6B7280' }}
+              tickFormatter={(v) => `${v}%`}
+              axisLine={{ stroke: '#E5E7EB' }}
+              tickLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="exam"
+              tick={{ fontSize: 11, fill: '#374151' }}
+              axisLine={{ stroke: '#E5E7EB' }}
+              tickLine={false}
+              width={140}
+            />
+            <Tooltip
+              contentStyle={tooltipStyle}
+              cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+              formatter={(v) => [`${v}%`, 'Taux']}
+            />
+            <Bar
+              dataKey="rate"
+              radius={[0, 6, 6, 0]}
+              fill={CORAIL}
+              isAnimationActive={false}
+              label={{
+                position: 'right',
+                fontSize: 11,
+                fill: '#6B7280',
+                formatter: (v) => `${v}%`,
+              }}
             />
           </BarChart>
         </ChartCard>
