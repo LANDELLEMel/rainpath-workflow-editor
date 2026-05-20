@@ -5,17 +5,15 @@ export type NodeType = ChannelType | 'start' | 'end';
 export type EdgeType = 'escalation' | 'reminder';
 
 export type ExamType =
-  | 'Tous les examens'
-  | 'Histologie'
-  | 'Cytologie'
-  | 'Biopsie prostate'
-  | 'Biopsie sein'
-  | 'Biopsie cutanée'
-  | 'Biopsie digestive'
-  | 'Colorations spéciales'
-  | 'Immunohistochimie'
+  | 'Biopsie simple'
+  | 'Biopsie étagée'
+  | 'Pièce opératoire'
+  | 'Cytologie gynécologique'
+  | 'Cytologie non gynécologique'
+  | 'Cytoponction'
+  | 'Examen extemporané'
   | 'Biologie moléculaire'
-  | 'Extemporané';
+  | 'Autopsie';
 
 export type DelayDays = 1 | 3 | 7 | 14 | 30;
 

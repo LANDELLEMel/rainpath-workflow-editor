@@ -39,8 +39,20 @@ body {
 }
 
 .react-flow__edge-path {
-  transition: stroke 150ms ease-out;
+  transition:
+    stroke 150ms ease-out,
+    stroke-width 150ms ease-out;
   animation: fadeIn 200ms ease-out;
+}
+
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.edge-dash-animated {
+  animation: dashFlow 1.5s linear infinite;
 }
 
 @keyframes fadeIn {

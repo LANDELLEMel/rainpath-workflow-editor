@@ -58,7 +58,7 @@ export function MailIcon({ size = 20, color = '#007AFF', className, style }: Ico
 /**
  * SMS / Messages — Apple Messages-style speech bubble
  */
-export function SmsIcon({ size = 20, color = '#FF9500', className, style }: IconProps) {
+export function SmsIcon({ size = 20, color = '#34C759', className, style }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -78,9 +78,9 @@ export function SmsIcon({ size = 20, color = '#FF9500', className, style }: Icon
 }
 
 /**
- * Courrier — Formal letter/document icon
+ * Courrier — Sealed envelope with raised flap, evoking La Poste mail.
  */
-export function CourrierIcon({ size = 20, color = '#8E8E93', className, style }: IconProps) {
+export function CourrierIcon({ size = 20, color = '#003DA5', className, style }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -95,10 +95,10 @@ export function CourrierIcon({ size = 20, color = '#8E8E93', className, style }:
       style={style}
       aria-hidden="true"
     >
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="8" y1="13" x2="16" y2="13" />
-      <line x1="8" y1="17" x2="13" y2="17" />
+      <rect x="3" y="6" width="18" height="14" rx="2" />
+      <path d="M3 8.5l8.4 5.6a1 1 0 001.2 0L21 8.5" />
+      <path d="M3 6l5.5 4.5" />
+      <path d="M21 6l-5.5 4.5" />
     </svg>
   );
 }

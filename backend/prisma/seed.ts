@@ -86,7 +86,7 @@ async function buildWorkflow(wf: SeedWorkflow) {
 // ─────────────────────────────────────────────────────────────────────────
 const biopsies: SeedWorkflow = {
   name: 'Remise de résultats — Biopsies',
-  examTypes: ['Histologie'],
+  examTypes: ['Biopsie simple', 'Biopsie étagée'],
   globalTimeout: 14,
   nodes: [
     {
@@ -211,7 +211,7 @@ const biopsies: SeedWorkflow = {
 // ─────────────────────────────────────────────────────────────────────────
 const extempo: SeedWorkflow = {
   name: 'Résultats urgents — Extemporanés',
-  examTypes: ['Extemporané'],
+  examTypes: ['Examen extemporané'],
   globalTimeout: 3,
   nodes: [
     {
@@ -265,7 +265,7 @@ const extempo: SeedWorkflow = {
 // ─────────────────────────────────────────────────────────────────────────
 const cytologie: SeedWorkflow = {
   name: 'Suivi cytologie courante',
-  examTypes: ['Cytologie'],
+  examTypes: ['Cytologie gynécologique', 'Cytologie non gynécologique'],
   globalTimeout: 10,
   nodes: [
     {

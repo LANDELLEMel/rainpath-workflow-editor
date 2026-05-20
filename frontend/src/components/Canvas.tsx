@@ -205,15 +205,17 @@ function CanvasInner({
         <MiniMap
           nodeStrokeWidth={3}
           nodeColor={nodeColor}
-          maskColor="rgba(0, 0, 0, 0.08)"
+          maskColor="rgba(0, 0, 0, 0.04)"
+          pannable={false}
+          zoomable={false}
           style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: 8,
-            width: 180,
-            height: 120,
-            right: 24,
-            bottom: 24,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: 12,
+            width: 160,
+            height: 100,
+            right: 16,
+            bottom: 16,
           }}
         />
       </ReactFlow>

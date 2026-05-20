@@ -21,17 +21,15 @@ export const nodeTypeSchema = z.enum([
 export const edgeTypeSchema = z.enum(['escalation', 'reminder']);
 
 export const examTypeSchema = z.enum([
-  'Tous les examens',
-  'Histologie',
-  'Cytologie',
-  'Biopsie prostate',
-  'Biopsie sein',
-  'Biopsie cutanée',
-  'Biopsie digestive',
-  'Colorations spéciales',
-  'Immunohistochimie',
+  'Biopsie simple',
+  'Biopsie étagée',
+  'Pièce opératoire',
+  'Cytologie gynécologique',
+  'Cytologie non gynécologique',
+  'Cytoponction',
+  'Examen extemporané',
   'Biologie moléculaire',
-  'Extemporané',
+  'Autopsie',
 ]);
 
 export const delayDaysSchema = z.union([

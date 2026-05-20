@@ -2,7 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
-  getSmoothStepPath,
+  getBezierPath,
   type EdgeProps,
 } from '@xyflow/react';
 import { Clock, ChevronDown } from 'lucide-react';
@@ -35,6 +35,7 @@ function DelayEdgeComponent(props: EdgeProps) {
       : '#9CA3AF';
   const delayDays = d.delayDays ?? 7;
   const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,15 +53,17 @@ function DelayEdgeComponent(props: EdgeProps) {
       document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     targetX,
     targetY,
     sourcePosition,
     targetPosition,
-    borderRadius: 12,
   });
+
+  const strokeOpacity = hover ? 0.85 : 0.5;
+  const strokeWidth = hover ? 2.5 : 2;
 
   return (
     <>
@@ -68,11 +71,23 @@ function DelayEdgeComponent(props: EdgeProps) {
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
+        className="edge-dash-animated"
         style={{
           stroke: channelColor,
-          strokeOpacity: 0.5,
-          strokeWidth: 2,
+          strokeOpacity,
+          strokeWidth,
+          strokeDasharray: '6 4',
+          fill: 'none',
         }}
+      />
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={20}
+        style={{ cursor: 'pointer' }}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
       />
       <EdgeLabelRenderer>
         <div
@@ -87,7 +102,7 @@ function DelayEdgeComponent(props: EdgeProps) {
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white border border-gray-200 shadow-sm cursor-pointer hover:shadow transition-all duration-150"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white border border-gray-200 shadow-sm cursor-pointer hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E85D4A]/20 transition-all duration-150"
             style={{
               borderColor: open ? channelColor : undefined,
             }}
@@ -106,7 +121,7 @@ function DelayEdgeComponent(props: EdgeProps) {
                     d.onChangeDelay?.(id, days);
                     setOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-1 text-xs hover:bg-gray-50 transition-colors duration-100 ${
+                  className={`w-full text-left px-3 py-1 text-xs hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50 transition-colors duration-100 ${
                     days === delayDays
                       ? 'font-medium text-gray-900'
                       : 'text-gray-600'
