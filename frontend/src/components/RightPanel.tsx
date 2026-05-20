@@ -24,7 +24,7 @@ export interface RightPanelProps {
   onOpenMessageModal: (nodeId: string) => void;
 }
 
-const TIMEOUT_OPTIONS = [3, 7, 14, 30];
+const TIMEOUT_OPTIONS = [3, 7, 10, 14, 21, 30];
 
 const CHANNEL_DRAG_MIME = 'application/x-rainpath-channel';
 
